@@ -1,50 +1,88 @@
-# Total War: NAPOLEON — page de présentation mobile
+# Napoléon — Grande Campagne
 
-Page web statique en français présentant la version mobile de *Total War: NAPOLEON* :
-bande-annonce, campagnes, galerie de captures et contenu inclus.
+Un jeu de stratégie napoléonien qui tourne dans le navigateur, sans rien installer,
+accompagné de la page de présentation du dépôt.
 
-## Aperçu
+- **`jeu/`** — le jeu : campagne au tour par tour sur l'Europe + batailles tactiques
+  en temps réel.
+- **`index.html`** — page de présentation (bande-annonce, galerie, contenu inclus).
 
-- **Statique** — aucun build, aucune dépendance. Ouvrez `index.html`.
-- **Mobile d'abord** — galerie à défilement par accroche sur téléphone, grille sur
-  écrans larges.
-- **Accessible** — lien d'évitement, navigation clavier dans la visionneuse
-  (`←`, `→`, `Échap`), focus renvoyé sur la vignette d'origine, textes alternatifs
-  descriptifs, `prefers-reduced-motion` respecté.
+## Le jeu
 
-## Structure
+Deux couches, à la manière du genre.
 
-```
-index.html
-assets/
-  css/styles.css       feuille de style unique
-  js/main.js           visionneuse de la galerie (JS natif, sans bibliothèque)
-  img/
-    trailer-poster.jpg image d'affiche de la bande-annonce
-    screens/*.jpg      9 captures, détourées et remises à l'horizontale
-  video/trailer.mp4    bande-annonce, 15 s, 1280×592, H.264 + AAC
-```
+**La campagne**, au tour par tour. 28 provinces de Lisbonne à Moscou, sept puissances
+jouables (France, Grande-Bretagne, Prusse, Autriche, Russie, Espagne, Empire ottoman).
+Chaque tour rapporte le revenu des provinces, moins la solde des régiments ; un trésor
+à sec dissout des unités. On lève des troupes chez soi, on fait marcher une armée sur
+une province voisine, et l'on tient 20 des 28 provinces pour gagner.
 
-## Consulter la page
+**La bataille**, en temps réel. Elle s'ouvre en pause : on dispose ses lignes, puis on
+engage. Sept types d'unités — ligne, légère, grenadiers, Garde impériale (réservée à la
+France), chasseurs à cheval, cuirassiers, artillerie à pied.
+
+Ce qui décide d'une bataille, c'est le **moral**, pas le décompte des morts :
+
+- une unité prise de flanc ou de dos s'effondre bien plus vite ;
+- l'artillerie brise les nerfs bien au-delà de ce qu'elle tue ;
+- la cavalerie ne vaut que lancée, et sa charge ne dure que quelques secondes ;
+- une unité qui rompt fuit, mais peut se rallier si on l'éloigne de l'ennemi ;
+- une armée qui a perdu les quatre cinquièmes de son monde décroche.
+
+Toutes les commandes sont tactiles : on touche un régiment pour le choisir, le sol pour
+l'y envoyer, une unité ennemie pour l'attaquer. Plusieurs régiments choisis se déploient
+côte à côte sur une même ligne. On glisse pour déplacer la vue, on pince pour zoomer.
+
+## Jouer
 
 ```sh
 python3 -m http.server 8000
 ```
 
-Puis ouvrez <http://localhost:8000>. Un simple double-clic sur `index.html`
-fonctionne aussi ; passer par un serveur évite seulement les restrictions
-`file://` de certains navigateurs sur la lecture vidéo.
+Puis <http://localhost:8000/jeu/>. Le jeu est écrit en scripts classiques, sans module
+ES : un double-clic sur `jeu/index.html` fonctionne donc aussi, sans serveur.
 
-## Origine des médias
+La partie est enregistrée dans le navigateur (`localStorage`) à chaque action. Le
+stockage peut échouer — navigation privée, quota, site bloqué — et le jeu continue de
+fonctionner sans, seule la reprise est perdue.
 
-Les captures sont des enregistrements d'écran de la fiche du jeu sur iPhone. Elles
-ont été rognées (bordures noires, barre d'état, cartes voisines du carrousel) puis
-pivotées à l'horizontale, et réencodées en JPEG progressif d'une largeur de 1600 px.
-La bande-annonce a été rognée au cadre utile puis réencodée de HEVC 1180×2556
-(29 Mo) en H.264 1280×592 (3,8 Mo) pour la lecture web.
+## Structure
+
+```
+index.html               page de présentation
+assets/                  ses styles, sa galerie, sa bande-annonce
+
+jeu/index.html           le jeu
+jeu/css/jeu.css          interface, pensée pour le pouce
+jeu/js/donnees.js        factions, provinces, types d'unités
+jeu/js/util.js           maths, aléatoire reproductible, DOM, sauvegarde
+jeu/js/audio.js          sons synthétisés par WebAudio (aucun fichier)
+jeu/js/carte.js          rendu de la carte de campagne
+jeu/js/bataille.js       moteur de bataille temps réel
+jeu/js/campagne.js       économie, mouvements, conquêtes, IA de campagne
+jeu/js/main.js           écrans et enchaînement des tours
+```
+
+Aucune dépendance, aucune étape de construction. Le son est synthétisé à la volée et
+coupé par défaut ; les cartes et le champ de bataille sont dessinés au canevas.
+
+`JEU.debug` expose `etat()`, `carte()` et `bataille()` pour inspecter une partie depuis
+la console ou un test de bout en bout ; rien dans le jeu n'en dépend.
+
+## La page de présentation
+
+Page statique en français : héros, bande-annonce, campagnes, galerie de neuf captures et
+contenu inclus. Lien d'évitement, visionneuse pilotable au clavier (`←`, `→`, `Échap`),
+focus renvoyé sur la vignette d'origine, textes alternatifs descriptifs,
+`prefers-reduced-motion` respecté.
+
+Les captures sont des enregistrements d'écran sur iPhone, rognés (bordures, barre d'état,
+cartes voisines du carrousel), remis à l'horizontale et réencodés en JPEG progressif de
+1600 px de large. La bande-annonce passe de HEVC 1180×2556 (29 Mo) à H.264 1280×592
+(3,8 Mo), recadrée au cadre utile.
 
 ## Mentions
 
-Page de présentation non officielle, réalisée à partir des visuels et du texte de
-présentation du jeu. Total War et NAPOLEON sont des marques de leurs détenteurs
-respectifs.
+Jeu original, inspiré du genre. La page de présentation reprend les visuels et le texte
+de présentation du jeu commercial : elle n'est pas officielle. Total War et NAPOLEON sont
+des marques de leurs détenteurs respectifs.

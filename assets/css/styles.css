@@ -137,6 +137,7 @@ a { color: var(--gold-hi); }
   border-bottom: 1px solid transparent;
 }
 .site-nav a:hover { color: var(--gold-hi); border-bottom-color: var(--gold); }
+.site-nav .nav-jouer { color: var(--gold); border-bottom-color: var(--gold-dim); }
 
 @media (min-width: 800px) { .site-nav { display: flex; } }
 
@@ -287,6 +288,43 @@ a { color: var(--gold-hi); }
   border-top: 1px solid var(--gold-dim);
   font-size: .85rem;
   color: var(--text-dim);
+}
+
+/* ---------- Bandeau du jeu ---------- */
+
+.section-jeu {
+  background:
+    linear-gradient(to bottom, rgba(11, 21, 38, .92), rgba(11, 21, 38, .97)),
+    var(--ink);
+  border-block: 1px solid var(--gold-dim);
+}
+
+.jeu-points {
+  display: grid;
+  gap: .55rem;
+  margin: 0 0 2rem;
+  padding: 0;
+  list-style: none;
+  color: var(--text-dim);
+}
+.jeu-points li {
+  padding-left: 1.4rem;
+  position: relative;
+}
+.jeu-points li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: .62em;
+  width: 7px;
+  height: 7px;
+  background: var(--gold);
+  transform: rotate(45deg);
+}
+.jeu-points strong { color: var(--parchment); font-weight: 600; }
+
+@media (min-width: 760px) {
+  .jeu-points { grid-template-columns: repeat(3, 1fr); gap: 1rem 1.5rem; }
 }
 
 /* ---------- Fonctionnalités ---------- */

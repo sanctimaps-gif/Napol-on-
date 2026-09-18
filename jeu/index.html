@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>Napoléon — Grande Campagne</title>
+<meta name="description" content="Jeu de stratégie napoléonien : campagne au tour par tour sur l'Europe et batailles tactiques en temps réel, jouable au doigt.">
+<meta name="theme-color" content="#0b1526">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%230b1526'/%3E%3Ctext x='32' y='45' font-family='Georgia,serif' font-size='36' font-weight='700' fill='%23c8a349' text-anchor='middle'%3EN%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Spectral:wght@300;400;600&display=swap">
+<link rel="stylesheet" href="css/jeu.css">
+</head>
+<body>
+
+<!-- ================= Menu ================= -->
+<section class="ecran ecran-menu actif" id="ecran-menu">
+  <div class="menu-inner">
+    <p class="menu-sur">Grande campagne</p>
+    <h1 class="menu-titre">Napoléon</h1>
+    <p class="menu-lede">Vingt ans de conflit. Une carte de l'Europe, sept puissances,
+      et des batailles qu'il faut gagner soi-même.</p>
+
+    <div class="choix-faction">
+      <p class="label">Choisissez votre puissance</p>
+      <div class="factions" id="factions"></div>
+      <p class="faction-desc" id="faction-desc"></p>
+    </div>
+
+    <div class="menu-actions">
+      <button class="btn btn-or" id="btn-nouvelle">Nouvelle campagne</button>
+      <button class="btn" id="btn-reprendre" hidden>Reprendre la campagne</button>
+      <button class="btn btn-fin" id="btn-escarmouche">Bataille rapide</button>
+      <button class="btn btn-fin" id="btn-regles">Comment jouer</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= Campagne ================= -->
+<section class="ecran ecran-campagne" id="ecran-campagne">
+  <header class="barre barre-haut">
+    <button class="pastille" id="btn-menu" aria-label="Menu">☰</button>
+    <div class="barre-bloc">
+      <span class="barre-cle" id="camp-faction">France</span>
+      <span class="barre-val" id="camp-saison">Printemps 1805</span>
+    </div>
+    <div class="barre-bloc droite">
+      <span class="barre-cle">Trésor</span>
+      <span class="barre-val or" id="camp-tresor">0</span>
+    </div>
+    <div class="barre-bloc droite">
+      <span class="barre-cle">Solde</span>
+      <span class="barre-val" id="camp-solde">0</span>
+    </div>
+  </header>
+
+  <div class="zone-carte">
+    <canvas id="carte" aria-label="Carte de campagne de l'Europe"></canvas>
+    <div class="banniere-mode" id="mode-marche" hidden>
+      Touchez une province voisine pour y marcher
+      <button class="lien" id="btn-annuler-marche">Annuler</button>
+    </div>
+  </div>
+
+  <div class="feuille" id="feuille">
+    <div class="feuille-poignee"></div>
+    <div class="feuille-corps" id="feuille-corps"></div>
+  </div>
+
+  <footer class="barre barre-bas">
+    <button class="btn btn-fin" id="btn-journal">Journal</button>
+    <button class="btn btn-or grand" id="btn-fin-tour">Fin du tour <span id="num-tour">1</span></button>
+  </footer>
+</section>
+
+<!-- ================= Bataille ================= -->
+<section class="ecran ecran-bataille" id="ecran-bataille">
+  <header class="barre barre-haut">
+    <div class="barre-bloc">
+      <span class="barre-cle" id="bat-nous-nom">Nous</span>
+      <span class="barre-val bleu" id="bat-nous">0</span>
+    </div>
+    <div class="vitesses" id="vitesses">
+      <button data-v="0" class="pastille">❙❙</button>
+      <button data-v="1" class="pastille actif">×1</button>
+      <button data-v="2" class="pastille">×2</button>
+      <button data-v="4" class="pastille">×4</button>
+    </div>
+    <div class="barre-bloc droite">
+      <span class="barre-cle" id="bat-eux-nom">Ennemi</span>
+      <span class="barre-val rouge" id="bat-eux">0</span>
+    </div>
+  </header>
+
+  <div class="zone-carte">
+    <canvas id="champ" aria-label="Champ de bataille"></canvas>
+    <div class="depart" id="depart">
+      <p class="depart-titre">Ordre de bataille</p>
+      <p class="depart-txt">Touchez un régiment pour le choisir, puis le sol pour le porter en avant.
+        Le temps est arrêté : disposez vos troupes, puis engagez.</p>
+      <button class="btn btn-or" id="btn-engager">Engager</button>
+    </div>
+  </div>
+
+  <div class="bandeau-unites" id="bandeau-unites"></div>
+
+  <footer class="barre barre-bas">
+    <button class="btn btn-fin" id="btn-tout">Tout</button>
+    <button class="btn btn-fin" id="btn-tenir">Tenir</button>
+    <button class="btn btn-fin" id="btn-vue">Vue</button>
+    <button class="btn btn-fin" id="btn-son">Son</button>
+    <button class="btn btn-fin btn-danger" id="btn-retraite">Retraite</button>
+  </footer>
+</section>
+
+<!-- ================= Fenêtres ================= -->
+<div class="voile" id="voile" hidden>
+  <div class="fenetre" id="fenetre" role="dialog" aria-modal="true">
+    <h2 class="fenetre-titre" id="fenetre-titre"></h2>
+    <div class="fenetre-corps" id="fenetre-corps"></div>
+    <div class="fenetre-pied" id="fenetre-pied"></div>
+  </div>
+</div>
+
+<script src="js/donnees.js"></script>
+<script src="js/util.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/carte.js"></script>
+<script src="js/bataille.js"></script>
+<script src="js/campagne.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
