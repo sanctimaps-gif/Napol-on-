@@ -1,5 +1,10 @@
-/* Carte de campagne : parchemin, provinces, armées.
-   Rendu au canevas, avec déplacement au doigt et pincement pour zoomer. */
+/* Carte de campagne.
+
+   Le décor — mers, côtes, relief, forêts, fleuves, massifs — est peint
+   une fois dans un canevas hors écran. Les provinces ne sont pas des
+   polygones posés dessus : elles viennent de la partition du continent
+   (partition.js), et leur appartenance est une glaçure de couleur
+   appliquée par-dessus le terrain. */
 
 (function (global) {
   'use strict';
@@ -7,6 +12,8 @@
   var JEU = global.JEU = global.JEU || {};
   var U = JEU.U;
   var D = JEU.D;
+  var Geo = JEU.Geo;
+  var Deco = JEU.Deco;
 
   function Carte(config) {
     this.toile = config.toile;
@@ -14,107 +21,71 @@
     this.etat = config.etat;
     this.surProvince = config.surProvince || function () {};
 
+    this.part = JEU.Partition.obtenir();
     this.cam = { x: D.LARGEUR_CARTE / 2, y: D.HAUTEUR_CARTE / 2, zoom: 1 };
     this.surlignees = {};
     this.selection = null;
     this.pulsation = 0;
 
-    this.fond = this.dessinerFond();
+    this.fond = this.peindreDecor();
     this.brancherEntrees();
     this.redimensionner();
     this.animer();
   }
 
-  /* Le décor complet de la carte, peint une fois : mer, côtes, relief,
-     forêts, fleuves. Les provinces ne sont qu'une teinte posée dessus. */
-  Carte.prototype.dessinerFond = function () {
+  /* ------------------------------------------------------------------ */
+  /* Le décor                                                            */
+  /* ------------------------------------------------------------------ */
+
+  Carte.prototype.peindreDecor = function () {
     var L = D.LARGEUR_CARTE, H = D.HAUTEUR_CARTE;
+    var part = this.part;
     var c = document.createElement('canvas');
-    c.width = L;
-    c.height = H;
+    c.width = L; c.height = H;
     var g = c.getContext('2d');
     var r = U.generateur(4242);
-    var bruit = JEU.Deco.bruit2D(2024);
-
-    /* --- Masque des terres : l'union de toutes les provinces. C'est lui
-       qui donne un vrai trait de côte plutôt que des polygones posés
-       sur un fond bleu. --- */
-    var masque = document.createElement('canvas');
-    masque.width = L; masque.height = H;
-    var gm = masque.getContext('2d');
-    gm.fillStyle = '#fff';
-    gm.strokeStyle = '#fff';
-    gm.lineJoin = 'round';
-    gm.lineCap = 'round';
-
-    /* Les contours sont dessinés à la main et ne se touchent pas tout à
-       fait : on relie d'abord les provinces frontalières par un isthme,
-       pour que la mer ne s'infiltre pas au milieu des terres. Les
-       liaisons maritimes, elles, restent de l'eau. */
-    D.PROVINCES.forEach(function (p) {
-      p.voisins.forEach(function (v) {
-        if (p.mers[v]) return;
-        var q = D.PROV[v];
-        gm.lineWidth = 34;
-        gm.beginPath();
-        gm.moveTo(p.cx, p.cy);
-        gm.lineTo(q.cx, q.cy);
-        gm.stroke();
-      });
-    });
-
-    D.PROVINCES.forEach(function (p) {
-      gm.beginPath();
-      p.poly.forEach(function (pt, i) { i ? gm.lineTo(pt[0], pt[1]) : gm.moveTo(pt[0], pt[1]); });
-      gm.closePath();
-      gm.fill();
-      gm.lineWidth = 6;             /* léger épaississement des côtes */
-      gm.stroke();
-    });
+    var bruit = Deco.bruit2D(2024);
+    var masque = part.masqueTerres;
 
     /* --- La mer --- */
-    var mer = g.createLinearGradient(0, 0, L * 0.5, H);
-    mer.addColorStop(0, '#5f8296');
-    mer.addColorStop(0.5, '#6f93a4');
-    mer.addColorStop(1, '#5a7c90');
+    var mer = g.createLinearGradient(0, 0, L * 0.4, H);
+    mer.addColorStop(0, '#41677e');
+    mer.addColorStop(0.45, '#4e7791');
+    mer.addColorStop(1, '#3e6579');
     g.fillStyle = mer;
     g.fillRect(0, 0, L, H);
 
-    for (var i = 0; i < 160; i++) {          /* veinage des flots */
-      var vy = r() * H, vx = r() * L;
-      g.strokeStyle = 'rgba(226,240,246,' + (0.05 + r() * 0.09) + ')';
-      g.lineWidth = 1 + r();
+    for (var i = 0; i < 260; i++) {              /* houle */
+      var vx = r() * L, vy = r() * H;
+      g.strokeStyle = 'rgba(206,230,240,' + (0.04 + r() * 0.07) + ')';
+      g.lineWidth = 0.8 + r();
       g.beginPath();
       g.moveTo(vx, vy);
-      g.bezierCurveTo(vx + 30, vy + 7, vx + 60, vy - 7, vx + 95, vy);
+      g.bezierCurveTo(vx + 26, vy + 6, vx + 54, vy - 6, vx + 88, vy);
       g.stroke();
     }
 
-    /* --- Halo côtier : le masque redessiné de plus en plus flou donne
-       les hauts-fonds autour des terres. --- */
+    /* --- Hauts-fonds : le trait de côte redessiné de plus en plus flou --- */
     if (typeof g.filter === 'string') {
-      [[22, 0.30], [13, 0.30], [6, 0.34]].forEach(function (pas) {
+      [[26, 0.22], [15, 0.24], [7, 0.28], [3, 0.30]].forEach(function (pas) {
         g.save();
         g.filter = 'blur(' + pas[0] + 'px)';
         g.globalAlpha = pas[1];
         g.drawImage(masque, 0, 0);
         g.restore();
       });
-      g.save();
-      g.globalCompositeOperation = 'source-atop';
-      g.restore();
     }
 
-    /* --- Les terres, peintes à l'intérieur du masque --- */
+    /* --- Les terres, peintes puis découpées au trait de côte --- */
     var terre = document.createElement('canvas');
     terre.width = L; terre.height = H;
     var gt = terre.getContext('2d');
 
     var sol = gt.createLinearGradient(0, 0, 0, H);
-    sol.addColorStop(0, '#77864f');
-    sol.addColorStop(0.4, '#8b9459');
-    sol.addColorStop(0.75, '#9a9a5f');
-    sol.addColorStop(1, '#888c52');
+    sol.addColorStop(0, '#6f7c4c');
+    sol.addColorStop(0.35, '#87904f');
+    sol.addColorStop(0.7, '#9a9a5c');
+    sol.addColorStop(1, '#8e8c4f');
     gt.fillStyle = sol;
     gt.fillRect(0, 0, L, H);
 
@@ -124,92 +95,248 @@
     rel.width = Math.ceil(L / GR); rel.height = Math.ceil(H / GR);
     var grl = rel.getContext('2d');
     var img = grl.createImageData(rel.width, rel.height);
-    var e = 0.028;
+    var e = 0.026;
     for (var ry = 0; ry < rel.height; ry++) {
       for (var rx = 0; rx < rel.width; rx++) {
-        var h0 = JEU.Deco.fbm(bruit, rx * e, ry * e, 5);
-        var hx = JEU.Deco.fbm(bruit, (rx + 1) * e, ry * e, 5);
-        var hy = JEU.Deco.fbm(bruit, rx * e, (ry + 1) * e, 5);
+        var h0 = Deco.fbm(bruit, rx * e, ry * e, 5);
+        var hx = Deco.fbm(bruit, (rx + 1) * e, ry * e, 5);
+        var hy = Deco.fbm(bruit, rx * e, (ry + 1) * e, 5);
         var pente = ((h0 - hx) + (h0 - hy)) * 6;
         var o = (ry * rel.width + rx) * 4;
         if (pente > 0) {
-          img.data[o] = 252; img.data[o + 1] = 248; img.data[o + 2] = 218;
-          img.data[o + 3] = Math.min(140, pente * 320);
+          img.data[o] = 250; img.data[o + 1] = 246; img.data[o + 2] = 216;
+          img.data[o + 3] = Math.min(120, pente * 280);
         } else {
-          img.data[o] = 38; img.data[o + 1] = 38; img.data[o + 2] = 22;
-          img.data[o + 3] = Math.min(150, -pente * 340);
-        }
-        /* Les hauteurs se teintent : montagnes ocre, plaines vertes. */
-        if (h0 > 0.58) {
-          img.data[o] = 172; img.data[o + 1] = 148; img.data[o + 2] = 104;
-          img.data[o + 3] = Math.max(img.data[o + 3], Math.min(190, (h0 - 0.58) * 620));
+          img.data[o] = 42; img.data[o + 1] = 40; img.data[o + 2] = 24;
+          img.data[o + 3] = Math.min(130, -pente * 300);
         }
       }
     }
     grl.putImageData(img, 0, 0);
     gt.drawImage(rel, 0, 0, L, H);
 
-    /* Fleuves d'abord : les forêts doivent pouvoir border leurs rives. */
-    gt.lineCap = 'round';
-    gt.lineJoin = 'round';
-    for (var riv = 0; riv < 22; riv++) {
-      var x = r() * L, y = r() * H;
-      var cap = r() * Math.PI * 2;
-      gt.strokeStyle = 'rgba(70,96,110,.35)';     /* lit encaissé */
-      gt.lineWidth = 4.5;
-      var pts = [[x, y]];
-      for (var s = 0; s < 30; s++) {
-        cap += (r() - 0.5) * 0.9;
-        x += Math.cos(cap) * 9;
-        y += Math.sin(cap) * 9;
-        pts.push([x, y]);
-      }
-      gt.beginPath();
-      pts.forEach(function (pt, i) { i ? gt.lineTo(pt[0], pt[1]) : gt.moveTo(pt[0], pt[1]); });
-      gt.stroke();
-      gt.strokeStyle = '#7ba3b8';
-      gt.lineWidth = 1.8;
-      gt.beginPath();
-      pts.forEach(function (pt, i) { i ? gt.lineTo(pt[0], pt[1]) : gt.moveTo(pt[0], pt[1]); });
-      gt.stroke();
-    }
+    this.peindreFleuves(gt);
+    this.peindreForets(gt, r, bruit, e / GR);
+    this.peindreMassifs(gt);
 
-    /* Forêts : des grappes de couronnes sur les terres basses. */
-    for (var f = 0; f < 520; f++) {
-      var fx = r() * L, fy = r() * H;
-      if (JEU.Deco.fbm(bruit, fx / GR * e, fy / GR * e, 5) > 0.56) continue;
-      var n = 4 + Math.floor(r() * 6);
-      for (var k = 0; k < n; k++) {
-        var ax = fx + (r() - 0.5) * 24, ay = fy + (r() - 0.5) * 17, t = 2.2 + r() * 2.6;
-        gt.fillStyle = 'rgba(26,36,18,.42)';
-        gt.beginPath(); gt.ellipse(ax + t * 0.6, ay + t * 0.45, t * 1.15, t * 0.5, 0, 0, Math.PI * 2); gt.fill();
-        gt.fillStyle = '#2c3d1c';
-        gt.beginPath(); gt.arc(ax, ay, t, 0, Math.PI * 2); gt.fill();
-        gt.fillStyle = '#41562a';
-        gt.beginPath(); gt.arc(ax - t * 0.26, ay - t * 0.3, t * 0.66, 0, Math.PI * 2); gt.fill();
-        gt.fillStyle = '#57703a';
-        gt.beginPath(); gt.arc(ax - t * 0.4, ay - t * 0.44, t * 0.34, 0, Math.PI * 2); gt.fill();
-      }
-    }
-
-    /* On ne garde des terres que ce qui tombe dans le masque. */
+    /* On ne garde des terres que ce qui tombe dans le trait de côte. */
     gt.globalCompositeOperation = 'destination-in';
     gt.drawImage(masque, 0, 0);
     gt.globalCompositeOperation = 'source-over';
-
     g.drawImage(terre, 0, 0);
 
-    /* Grain de papier ancien sur l'ensemble. */
-    for (var j = 0; j < 4200; j++) {
+    /* --- Le trait de côte --- */
+    g.lineJoin = 'round';
+    Geo.TERRES.forEach(function (t) {
+      g.beginPath();
+      t.poly.forEach(function (pt, k) { k ? g.lineTo(pt[0], pt[1]) : g.moveTo(pt[0], pt[1]); });
+      g.closePath();
+      g.strokeStyle = 'rgba(30,24,12,.55)';
+      g.lineWidth = 1.6;
+      g.stroke();
+      t.trous.forEach(function (trou) {
+        g.beginPath();
+        trou.forEach(function (pt, k) { k ? g.lineTo(pt[0], pt[1]) : g.moveTo(pt[0], pt[1]); });
+        g.closePath();
+        g.stroke();
+      });
+    });
+
+    /* --- Grain de papier ancien --- */
+    for (var j = 0; j < 5200; j++) {
       g.globalAlpha = 0.03 + r() * 0.05;
-      g.fillStyle = r() > 0.5 ? '#f5ead0' : '#4a4736';
+      g.fillStyle = r() > 0.5 ? '#f5ead0' : '#42402e';
       g.fillRect(r() * L, r() * H, 2, 2);
     }
     g.globalAlpha = 1;
 
-    this.masque = masque;
     return c;
   };
+
+  /* Les grands fleuves, à leur cours réel. */
+  Carte.prototype.peindreFleuves = function (g) {
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    Geo.FLEUVES.forEach(function (f) {
+      var pts = Geo.projeter(f.pts);
+      function tracer(largeur, style) {
+        g.strokeStyle = style;
+        g.lineWidth = largeur;
+        g.beginPath();
+        /* Courbe passant par les points, pour un cours qui serpente. */
+        g.moveTo(pts[0][0], pts[0][1]);
+        for (var i = 0; i < pts.length - 1; i++) {
+          var mx = (pts[i][0] + pts[i + 1][0]) / 2;
+          var my = (pts[i][1] + pts[i + 1][1]) / 2;
+          g.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
+        }
+        g.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1]);
+        g.stroke();
+      }
+      tracer(f.rang * 2.2 + 3, 'rgba(66,84,58,.45)');     /* vallée */
+      tracer(f.rang * 0.9 + 0.8, '#4e7f95');              /* eau */
+      tracer(f.rang * 0.4 + 0.3, '#86b3c6');              /* reflet */
+    });
+  };
+
+  /* Les forêts, sur les terres basses. */
+  Carte.prototype.peindreForets = function (g, r, bruit, ech) {
+    var L = D.LARGEUR_CARTE, H = D.HAUTEUR_CARTE;
+    for (var f = 0; f < 900; f++) {
+      var fx = r() * L, fy = r() * H;
+      if (Deco.fbm(bruit, fx * ech, fy * ech, 5) > 0.54) continue;
+      var n = 4 + Math.floor(r() * 7);
+      for (var k = 0; k < n; k++) {
+        var ax = fx + (r() - 0.5) * 26, ay = fy + (r() - 0.5) * 18, t = 2.1 + r() * 2.4;
+        g.fillStyle = 'rgba(26,36,18,.4)';
+        g.beginPath(); g.ellipse(ax + t * 0.6, ay + t * 0.45, t * 1.1, t * 0.48, 0, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#2b3b1b';
+        g.beginPath(); g.arc(ax, ay, t, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#3f5429';
+        g.beginPath(); g.arc(ax - t * 0.26, ay - t * 0.3, t * 0.64, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#556e38';
+        g.beginPath(); g.arc(ax - t * 0.4, ay - t * 0.44, t * 0.32, 0, Math.PI * 2); g.fill();
+      }
+    }
+  };
+
+  /* Les massifs : de petits reliefs alignés le long des chaînes réelles. */
+  Carte.prototype.peindreMassifs = function (g) {
+    Geo.MASSIFS.forEach(function (m) {
+      var pts = Geo.projeter(m.pts);
+      for (var i = 0; i < pts.length - 1; i++) {
+        var a = pts[i], b = pts[i + 1];
+        var d = U.dist(a[0], a[1], b[0], b[1]);
+        var pas = 9;
+        var n = Math.max(1, Math.round(d / pas));
+        for (var k = 0; k <= n; k++) {
+          var t = k / n;
+          var x = a[0] + (b[0] - a[0]) * t;
+          var y = a[1] + (b[1] - a[1]) * t;
+          /* On étale la chaîne sur quelques rangs, pour lui donner du corps. */
+          for (var rang = -1; rang <= 1; rang++) {
+            var dx = x + rang * 5 + (k % 2) * 3;
+            var dy = y + rang * 6 + ((k + rang) % 2) * 2;
+            var taille = 5.5 - Math.abs(rang) * 1.4;
+            g.fillStyle = 'rgba(38,32,18,.4)';        /* ombre */
+            g.beginPath();
+            g.moveTo(dx - taille, dy + taille * 0.55);
+            g.lineTo(dx + taille * 1.3, dy + taille * 0.55);
+            g.lineTo(dx + taille * 0.3, dy - taille * 0.9);
+            g.closePath();
+            g.fill();
+            g.fillStyle = '#8e7f5e';                  /* versant éclairé */
+            g.beginPath();
+            g.moveTo(dx - taille, dy + taille * 0.5);
+            g.lineTo(dx, dy + taille * 0.5);
+            g.lineTo(dx, dy - taille);
+            g.closePath();
+            g.fill();
+            g.fillStyle = '#5f5539';                  /* versant à l'ombre */
+            g.beginPath();
+            g.moveTo(dx, dy + taille * 0.5);
+            g.lineTo(dx + taille, dy + taille * 0.5);
+            g.lineTo(dx, dy - taille);
+            g.closePath();
+            g.fill();
+            g.fillStyle = 'rgba(246,244,230,.75)';    /* neige au sommet */
+            g.beginPath();
+            g.moveTo(dx - taille * 0.3, dy - taille * 0.45);
+            g.lineTo(dx + taille * 0.3, dy - taille * 0.45);
+            g.lineTo(dx, dy - taille);
+            g.closePath();
+            g.fill();
+          }
+        }
+      }
+    });
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Calque des appartenances                                            */
+  /* ------------------------------------------------------------------ */
+
+  /* Une image où chaque point de terre porte la couleur de son maître.
+     Elle n'est refaite qu'au changement de propriétaire — pas à chaque
+     image, ce qui coûterait un million d'écritures soixante fois par
+     seconde. */
+  Carte.prototype.majTeintes = function () {
+    var etat = this.etat;
+    var signature = D.PROVINCES.map(function (p) { return etat.provinces[p.id].faction; }).join('');
+    if (this.signatureTeintes === signature) return;
+    this.signatureTeintes = signature;
+
+    var part = this.part, L = part.L, H = part.H;
+    if (!this.teintes) {
+      this.teintes = document.createElement('canvas');
+      this.teintes.width = L;
+      this.teintes.height = H;
+    }
+    var g = this.teintes.getContext('2d');
+    var img = g.createImageData(L, H);
+
+    /* Couleur de chaque province, décomposée une fois. */
+    var rouges = [], verts = [], bleus = [];
+    D.PROVINCES.forEach(function (p, i) {
+      var hex = D.FACTIONS[etat.provinces[p.id].faction].couleur;
+      rouges[i] = parseInt(hex.substr(1, 2), 16);
+      verts[i] = parseInt(hex.substr(3, 2), 16);
+      bleus[i] = parseInt(hex.substr(5, 2), 16);
+    });
+
+    var src = part.provinceDe, AUCUNE = part.AUCUNE;
+    for (var o = 0, n = L * H; o < n; o++) {
+      var p = src[o];
+      if (p === AUCUNE) continue;
+      var q = o * 4;
+      img.data[q] = rouges[p];
+      img.data[q + 1] = verts[p];
+      img.data[q + 2] = bleus[p];
+      img.data[q + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+    this.miniSale = true;
+  };
+
+  /* Calque doré des provinces mises en avant, refait seulement quand la
+     liste change. */
+  Carte.prototype.majSurbrillance = function () {
+    var cles = Object.keys(this.surlignees).sort().join(',') + '|' + this.selection;
+    if (this.signatureSurbrillance === cles) return;
+    this.signatureSurbrillance = cles;
+
+    var part = this.part, L = part.L, H = part.H;
+    if (!this.halo) {
+      this.halo = document.createElement('canvas');
+      this.halo.width = L; this.halo.height = H;
+    }
+    var g = this.halo.getContext('2d');
+    g.clearRect(0, 0, L, H);
+
+    var actives = {};
+    var self = this;
+    var aucune = true;
+    D.PROVINCES.forEach(function (p, i) {
+      if (self.surlignees[p.id]) { actives[i] = 1; aucune = false; }
+      else if (self.selection === p.id) { actives[i] = 2; aucune = false; }
+    });
+    if (aucune) return;
+
+    var img = g.createImageData(L, H);
+    var src = part.provinceDe;
+    for (var o = 0, n = L * H; o < n; o++) {
+      var a = actives[src[o]];
+      if (!a) continue;
+      var q = o * 4;
+      img.data[q] = 240; img.data[q + 1] = 213; img.data[q + 2] = 133;
+      img.data[q + 3] = a === 1 ? 92 : 58;
+    }
+    g.putImageData(img, 0, 0);
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Entrées                                                             */
+  /* ------------------------------------------------------------------ */
 
   Carte.prototype.brancherEntrees = function () {
     var self = this;
@@ -290,9 +417,6 @@
     this.surRedim = function () { self.redimensionner(); };
     global.addEventListener('resize', this.surRedim);
     global.addEventListener('orientationchange', this.surRedim);
-
-    /* La feuille du bas change de hauteur selon la province ouverte :
-       on suit la boîte réelle du canevas. */
     if (global.ResizeObserver) {
       this.observateur = new ResizeObserver(this.surRedim);
       this.observateur.observe(toile);
@@ -339,11 +463,8 @@
     }
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    /* On peut toujours dézoomer jusqu'à voir toute l'Europe… */
     this.zoomMin = Math.min(l / (D.LARGEUR_CARTE + 60), h / (D.HAUTEUR_CARTE + 60));
     if (!this.cadre) {
-      /* …mais on ouvre sur une échelle lisible : la carte remplit la
-         hauteur disponible, et l'on fait défiler d'est en ouest. */
       this.cam.zoom = U.borne(
         Math.max(l / D.LARGEUR_CARTE, h / D.HAUTEUR_CARTE), this.zoomMin, 1.3);
       this.cadre = true;
@@ -358,11 +479,13 @@
     };
   };
 
+  /* La province sous un point : une simple lecture dans la partition. */
   Carte.prototype.provinceEn = function (x, y) {
-    for (var i = 0; i < D.PROVINCES.length; i++) {
-      if (U.pointDansPolygone(x, y, D.PROVINCES[i].poly)) return D.PROVINCES[i];
-    }
-    return null;
+    var part = this.part;
+    var ix = Math.round(x), iy = Math.round(y);
+    if (ix < 0 || iy < 0 || ix >= part.L || iy >= part.H) return null;
+    var p = part.provinceDe[iy * part.L + ix];
+    return p === part.AUCUNE ? null : D.PROVINCES[p];
   };
 
   Carte.prototype.centrerSur = function (id) {
@@ -373,7 +496,9 @@
     this.caler();
   };
 
-  /* --- Rendu ---------------------------------------------------------- */
+  /* ------------------------------------------------------------------ */
+  /* Rendu                                                               */
+  /* ------------------------------------------------------------------ */
 
   Carte.prototype.animer = function () {
     var self = this;
@@ -390,78 +515,48 @@
     var g = this.ctx;
     var L = this.toile.clientWidth, H = this.toile.clientHeight;
     var etat = this.etat;
+    var self = this;
+
+    this.majTeintes();
+    this.majSurbrillance();
 
     g.clearRect(0, 0, L, H);
+    g.fillStyle = '#31536a';
+    g.fillRect(0, 0, L, H);
+
     g.save();
     g.translate(L / 2, H / 2);
     g.scale(this.cam.zoom, this.cam.zoom);
     g.translate(-this.cam.x, -this.cam.y);
 
-    g.fillStyle = '#4d6b7d';
-    g.fillRect(-400, -400, D.LARGEUR_CARTE + 800, D.HAUTEUR_CARTE + 800);
+    g.imageSmoothingEnabled = true;
     g.drawImage(this.fond, 0, 0);
 
-    var self = this;
+    /* Appartenance : une glaçure, puis un voile clair pour la saturation. */
+    g.globalCompositeOperation = 'multiply';
+    g.globalAlpha = 0.5;
+    g.drawImage(this.teintes, 0, 0);
+    g.globalCompositeOperation = 'source-over';
+    g.globalAlpha = 0.12;
+    g.drawImage(this.teintes, 0, 0);
+    g.globalAlpha = 1;
 
-    /* Teinte de faction : une glaçure, pas un aplat — le relief peint
-       doit rester visible dessous. */
-    D.PROVINCES.forEach(function (p) {
-      var prop = etat.provinces[p.id];
-      var f = D.FACTIONS[prop.faction];
-      g.save();
-      g.beginPath();
-      p.poly.forEach(function (pt, i) { i ? g.lineTo(pt[0], pt[1]) : g.moveTo(pt[0], pt[1]); });
-      g.closePath();
-      g.clip();
+    g.drawImage(this.part.bords, 0, 0);
 
-      /* Deux passes : une glaçure qui garde le relief, puis un voile
-         coloré qui rend l'appartenance lisible d'un coup d'œil. */
-      g.globalCompositeOperation = 'multiply';
-      g.globalAlpha = 0.5;
-      g.fillStyle = f.couleur;
-      g.fillRect(p.cx - 400, p.cy - 400, 800, 800);
-      g.globalCompositeOperation = 'source-over';
-      g.globalAlpha = 0.16;
-      g.fillStyle = f.clair;
-      g.fillRect(p.cx - 400, p.cy - 400, 800, 800);
-      g.restore();
-    });
+    if (this.halo) {
+      g.globalAlpha = 0.6 + Math.sin(this.pulsation * 2) * 0.3;
+      g.drawImage(this.halo, 0, 0);
+      g.globalAlpha = 1;
+    }
 
-    /* Frontières, puis surlignages. */
-    D.PROVINCES.forEach(function (p) {
-      g.beginPath();
-      p.poly.forEach(function (pt, i) { i ? g.lineTo(pt[0], pt[1]) : g.moveTo(pt[0], pt[1]); });
-      g.closePath();
-      g.lineJoin = 'round';
-      g.strokeStyle = 'rgba(46,34,18,.55)';
-      g.lineWidth = 2.4;
-      g.stroke();
-      g.strokeStyle = 'rgba(245,232,200,.28)';
-      g.lineWidth = 0.9;
-      g.stroke();
+    /* Routes maritimes : un pointillé entre les ports reliés. */
+    this.dessinerRoutes(g);
 
-      if (self.surlignees[p.id]) {
-        g.fillStyle = 'rgba(240,213,133,' + (0.20 + Math.sin(self.pulsation * 2) * 0.12) + ')';
-        g.fill();
-        g.strokeStyle = '#f0d585';
-        g.lineWidth = 2.6;
-        g.stroke();
-      }
-      if (self.selection === p.id) {
-        g.strokeStyle = '#f0d585';
-        g.lineWidth = 3.4;
-        g.stroke();
-      }
-    });
-
-    /* Armées d'abord, plaques ensuite : les noms doivent rester lisibles. */
     D.PROVINCES.forEach(function (p) { self.dessinerArmee(g, p); });
 
     /* Les plaques se disputent la place : on sert d'abord la province
        ouverte, puis les capitales, puis le reste, et l'on écarte celles
        qui recouvriraient une plaque déjà posée. */
-    /* La minicarte occupe un coin de l'écran : on interdit d'avance cet
-       espace aux plaques, en le ramenant en coordonnées de carte. */
     this.boitesPlaques = [];
     var mini = this.boiteMini;
     if (mini) {
@@ -469,18 +564,38 @@
       var bd = this.versMonde(mini.x + mini.l + 6, mini.y + mini.h + 6);
       this.boitesPlaques.push({ x: hg.x, y: hg.y, l: bd.x - hg.x, h: bd.y - hg.y });
     }
-
-    var ordre = D.PROVINCES.slice().sort(function (a, b) {
+    D.PROVINCES.slice().sort(function (a, b) {
       return rangPlaque(etat, self.selection, a) - rangPlaque(etat, self.selection, b);
-    });
-    ordre.forEach(function (p) { self.dessinerPlaque(g, p); });
+    }).forEach(function (p) { self.dessinerPlaque(g, p); });
 
     g.restore();
     this.dessinerMiniCarte(g, L, H);
   };
 
-  /* Priorité d'affichage d'une plaque : la province ouverte, puis les
-     capitales, puis les provinces avec une armée, puis le reste. */
+  /* Liaisons maritimes, visibles seulement de près. */
+  Carte.prototype.dessinerRoutes = function (g) {
+    if (this.cam.zoom < 0.55) return;
+    g.save();
+    g.strokeStyle = 'rgba(244,236,216,.32)';
+    g.lineWidth = 1.6 / this.cam.zoom;
+    g.setLineDash([5 / this.cam.zoom, 6 / this.cam.zoom]);
+    var vus = {};
+    D.PROVINCES.forEach(function (p) {
+      Object.keys(p.mers).forEach(function (v) {
+        var cle = p.id < v ? p.id + v : v + p.id;
+        if (vus[cle]) return;
+        vus[cle] = true;
+        var q = D.PROV[v];
+        g.beginPath();
+        g.moveTo(p.vx, p.vy);
+        g.lineTo(q.vx, q.vy);
+        g.stroke();
+      });
+    });
+    g.setLineDash([]);
+    g.restore();
+  };
+
   function rangPlaque(etat, selection, p) {
     var prop = etat.provinces[p.id];
     if (selection === p.id) return 0;
@@ -491,47 +606,43 @@
     return 3;
   }
 
-  /* Plaque de nom : « Paris (France) », teintée selon qu'il s'agit de
-     nous, d'une puissance hostile ou d'un tiers. */
   Carte.prototype.dessinerPlaque = function (g, p) {
     var etat = this.etat;
     var prop = etat.provinces[p.id];
     var capitale = D.FACTIONS[prop.faction].capitale === p.id;
     var ech = 1 / Math.max(this.cam.zoom, 0.45);
 
-    var taille = (capitale ? 12 : 10.5);
+    var taille = capitale ? 12 : 10.5;
     var texte = p.ville + ' (' + D.FACTIONS[prop.faction].nom + ')';
 
-    /* Mesure avant de peindre, pour savoir si la place est libre. */
     g.save();
     g.font = '500 ' + taille + 'px Cinzel, Georgia, serif';
     var l = (g.measureText(texte).width + taille * 2.49) * ech;
     var h = taille * 1.72 * ech;
     g.restore();
 
-    var x = p.cx, y = p.cy - 16 * ech;
+    /* La plaque se pose sur la capitale, non sur le centre du territoire :
+       c'est la ville qu'elle nomme. */
+    var x = p.vx, y = p.vy - 17 * ech;
     var boite = { x: x - l / 2, y: y - h / 2, l: l, h: h };
 
     for (var i = 0; i < this.boitesPlaques.length; i++) {
       var b = this.boitesPlaques[i];
       if (boite.x < b.x + b.l && boite.x + boite.l > b.x &&
-          boite.y < b.y + b.h && boite.y + boite.h > b.y) {
-        return;                       /* la place est prise */
-      }
+          boite.y < b.y + b.h && boite.y + boite.h > b.y) return;
     }
     this.boitesPlaques.push(boite);
 
     g.save();
     g.translate(x, y);
     g.scale(ech, ech);
-    JEU.Deco.plaque(g, 0, 0, texte, {
+    Deco.plaque(g, 0, 0, texte, {
       teinte: prop.faction === etat.joueur ? 'nous' : (capitale ? 'ennemi' : 'autre'),
       taille: taille
     });
     g.restore();
   };
 
-  /* Marqueur d'armée : un porte-drapeau planté sur la province. */
   Carte.prototype.dessinerArmee = function (g, p) {
     var etat = this.etat;
     var armee = etat.armees.filter(function (a) { return a.province === p.id; })[0];
@@ -543,10 +654,9 @@
     var ech = 1 / Math.max(this.cam.zoom, 0.45);
 
     g.save();
-    g.translate(p.cx, p.cy + 14 * ech);
+    g.translate(p.vx, p.vy + 13 * ech);
     g.scale(ech, ech);
 
-    /* Une armée du joueur qui n'a pas encore marché bat du pavillon. */
     if (joueur && !armee.deplacee) {
       var halo = 0.30 + Math.sin(this.pulsation * 2.4) * 0.22;
       g.fillStyle = 'rgba(240,213,133,' + halo + ')';
@@ -555,26 +665,24 @@
       g.fill();
     }
 
-    g.fillStyle = 'rgba(24,20,10,.4)';                 /* ombre au sol */
+    g.fillStyle = 'rgba(24,20,10,.42)';
     g.beginPath();
     g.ellipse(1, 4, 11, 4, 0, 0, Math.PI * 2);
     g.fill();
 
-    /* La figurine du chef, puis son drapeau. */
-    var sprite = JEU.Deco.spriteSoldat('cav', f.couleur, f.clair);
+    var sprite = Deco.spriteSoldat('cav', f.couleur, f.clair);
     var s = 2.1;
     g.drawImage(sprite, -sprite.mondeL * s / 2, -sprite.mondeH * s + 5,
       sprite.mondeL * s, sprite.mondeH * s);
-    JEU.Deco.drapeau(g, 8, -6, 15, f.couleur, f.clair, this.pulsation * 1.6);
+    Deco.drapeau(g, 8, -6, 15, f.couleur, f.clair, this.pulsation * 1.6);
 
-    /* Effectif, sur une pastille sombre bordée d'or. */
     var texte = U.nb(hommes);
     g.font = '700 10px Cinzel, Georgia, serif';
     var l = g.measureText(texte).width + 12;
-    JEU.Deco.cheminArrondi(g, -l / 2, 6, l, 14, 7);
+    Deco.cheminArrondi(g, -l / 2, 6, l, 14, 7);
     g.fillStyle = 'rgba(12,20,36,.92)';
     g.fill();
-    g.strokeStyle = joueur ? JEU.Deco.OR_VIF : 'rgba(200,163,73,.5)';
+    g.strokeStyle = joueur ? Deco.OR_VIF : 'rgba(200,163,73,.5)';
     g.lineWidth = 1.2;
     g.stroke();
     g.fillStyle = '#f4ecd8';
@@ -585,9 +693,8 @@
     g.restore();
   };
 
-  /* Minicarte : les factions en aplats, plus le cadre de la vue. */
+  /* La minicarte reprend le calque des appartenances, réduit. */
   Carte.prototype.dessinerMiniCarte = function (g, L, H) {
-    var etat = this.etat;
     var large = Math.min(132, L * 0.36);
     var ech = large / D.LARGEUR_CARTE;
     var haut = D.HAUTEUR_CARTE * ech;
@@ -597,40 +704,25 @@
     g.translate(x, y);
 
     g.fillStyle = 'rgba(10,18,32,.9)';
-    JEU.Deco.cheminArrondi(g, -3, -3, large + 6, haut + 6, 3);
+    Deco.cheminArrondi(g, -3, -3, large + 6, haut + 6, 3);
     g.fill();
 
     g.save();
-    JEU.Deco.cheminArrondi(g, 0, 0, large, haut, 2);
+    Deco.cheminArrondi(g, 0, 0, large, haut, 2);
     g.clip();
     g.fillStyle = '#e8dcc0';
     g.fillRect(0, 0, large, haut);
+    g.imageSmoothingEnabled = true;
+    g.drawImage(this.teintes, 0, 0, large, haut);
 
-    D.PROVINCES.forEach(function (p) {
-      g.beginPath();
-      p.poly.forEach(function (pt, i) {
-        var mx = pt[0] * ech, my = pt[1] * ech;
-        i ? g.lineTo(mx, my) : g.moveTo(mx, my);
-      });
-      g.closePath();
-      /* Rempli *et* contourné de la même teinte : à cette échelle les
-         contours ne se touchent pas, et le trait referme les interstices. */
-      g.fillStyle = g.strokeStyle = D.FACTIONS[etat.provinces[p.id].faction].couleur;
-      g.lineWidth = 2.4;
-      g.lineJoin = 'round';
-      g.fill();
-      g.stroke();
-    });
-
-    /* Rectangle de la vue courante. */
     var vueL = (L / this.cam.zoom) * ech;
     var vueH = (H / this.cam.zoom) * ech;
-    g.strokeStyle = 'rgba(255,255,255,.9)';
+    g.strokeStyle = 'rgba(255,255,255,.92)';
     g.lineWidth = 1.4;
     g.strokeRect(this.cam.x * ech - vueL / 2, this.cam.y * ech - vueH / 2, vueL, vueH);
     g.restore();
 
-    JEU.Deco.cadre(g, 0, 0, large, haut, 2, 2.4);
+    Deco.cadre(g, 0, 0, large, haut, 2, 2.4);
     g.restore();
 
     this.boiteMini = { x: x, y: y, l: large, h: haut, ech: ech };

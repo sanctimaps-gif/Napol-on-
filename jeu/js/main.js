@@ -724,6 +724,11 @@
     bataille: function () { return bataille; }
   };
 
+  /* La partition du continent fonde à la fois la carte et le voisinage
+     des provinces : on la construit au démarrage, avant qu'une partie
+     puisse en dépendre, plutôt qu'à l'ouverture de la première carte. */
+  JEU.Partition.obtenir();
+
   construireMenu();
   brancher();
 })(window);

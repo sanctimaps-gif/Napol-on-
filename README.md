@@ -45,9 +45,19 @@ Tout est peint au canevas, sans une seule image importée.
 - **Le champ de bataille** a son relief (calculé en bruit fractal puis adouci), ses
   parcelles cultivées, ses haies, son ruisseau et ses bosquets. Les salves allument des
   lueurs de bouche sur toute la ligne de feu, et la poudre dérive au vent.
-- **La carte de campagne** est peinte de la même façon : trait de côte tiré de l'union
-  des provinces, hauts-fonds, relief ombré, forêts, fleuves. La teinte de faction est
-  une glaçure, pas un aplat — le relief reste visible dessous.
+- **La carte de campagne** a la silhouette de l'Europe, pas celle d'un assemblage de
+  polygones : le trait de côte est donné en longitude et latitude réelles, sur quelque
+  deux cent trente points, mers intérieures percées. Les grands fleuves suivent leur
+  cours — Rhin, Danube, Loire, Vistule, Dniepr — et les massifs sont à leur place :
+  Alpes, Pyrénées, Carpates, Apennins, Caucase. Par-dessus : hauts-fonds, relief ombré,
+  forêts. La teinte de faction est une glaçure, pas un aplat — le relief reste visible
+  dessous.
+- **Les provinces ne sont pas dessinées à la main.** Chaque province a une capitale, à
+  ses vraies coordonnées ; le territoire lui est attribué par la partition de Voronoï
+  du continent, déformée par un bruit fractal pour que les frontières serpentent au
+  lieu d'être des segments de droite. Les frontières sont donc jointives par
+  construction, et le voisinage des provinces — qui commande tout le jeu de campagne —
+  se déduit de la carte au lieu d'être déclaré.
 - **Les noms de provinces** sont des plaques bordées d'or, bleues chez nous, rouges chez
   l'adversaire, ambrées ailleurs. Elles s'effacent d'elles-mêmes quand elles se
   recouvriraient, en servant d'abord la province ouverte et les capitales.
@@ -76,9 +86,11 @@ assets/                  ses styles, sa galerie, sa bande-annonce
 
 jeu/index.html           le jeu
 jeu/css/jeu.css          interface, pensée pour le pouce
+jeu/js/geographie.js     côtes, fleuves et massifs en longitude/latitude
 jeu/js/donnees.js        factions, provinces, types d'unités
 jeu/js/util.js           maths, aléatoire reproductible, DOM, sauvegarde
 jeu/js/deco.js           ornements, plaques, figurines, bruit fractal
+jeu/js/partition.js      découpage du continent, frontières et voisinage
 jeu/js/audio.js          sons synthétisés par WebAudio (aucun fichier)
 jeu/js/carte.js          rendu de la carte de campagne
 jeu/js/bataille.js       moteur de bataille temps réel
