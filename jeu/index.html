@@ -79,20 +79,25 @@
 
 <!-- ================= Bataille ================= -->
 <section class="ecran ecran-bataille" id="ecran-bataille">
-  <header class="barre barre-haut">
-    <div class="barre-bloc">
-      <span class="barre-cle" id="bat-nous-nom">Nous</span>
-      <span class="barre-val bleu" id="bat-nous">0</span>
+  <header class="barre barre-haut barre-bataille">
+    <div class="general">
+      <canvas class="general-ecu" id="general-ecu" width="42" height="52"></canvas>
+      <div class="general-jauges">
+        <div class="jauge-armee" id="jauge-armee">
+          <i class="j-nous" id="j-nous"></i><i class="j-eux" id="j-eux"></i>
+        </div>
+        <div class="general-noms">
+          <span id="bat-nous-nom">Nous</span>
+          <span id="bat-eux-nom">Ennemi</span>
+        </div>
+      </div>
     </div>
     <div class="vitesses" id="vitesses">
-      <button data-v="0" class="pastille">❙❙</button>
+      <button data-v="0" class="pastille" aria-label="Pause">❙❙</button>
       <button data-v="1" class="pastille actif">×1</button>
       <button data-v="2" class="pastille">×2</button>
       <button data-v="4" class="pastille">×4</button>
-    </div>
-    <div class="barre-bloc droite">
-      <span class="barre-cle" id="bat-eux-nom">Ennemi</span>
-      <span class="barre-val rouge" id="bat-eux">0</span>
+      <span class="chrono" id="chrono">00:00</span>
     </div>
   </header>
 
@@ -128,6 +133,7 @@
 
 <script src="js/donnees.js"></script>
 <script src="js/util.js"></script>
+<script src="js/deco.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/carte.js"></script>
 <script src="js/bataille.js"></script>

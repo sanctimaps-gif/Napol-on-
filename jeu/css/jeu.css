@@ -235,7 +235,17 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .barre-val.bleu { color: var(--bleu); }
 .barre-val.rouge { color: #e08a7c; }
 
-.vitesses { display: flex; gap: .3rem; margin: 0 auto; }
+.vitesses {
+  display: flex;
+  align-items: center;
+  gap: .22rem;
+  flex: none;
+  padding: .2rem .3rem;
+  background: rgba(6,12,24,.7);
+  border: 1px solid var(--or-voile);
+  border-radius: 4px;
+}
+.vitesses .pastille { min-width: 32px; height: 30px; font-size: .68rem; padding: 0 .3rem; }
 
 /* ---------- Zone canevas ---------- */
 
@@ -422,10 +432,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bandeau-unites {
   flex: none;
   display: flex;
-  gap: .35rem;
-  padding: .45rem .5rem;
-  background: rgba(8,15,28,.94);
-  border-top: 1px solid var(--or-voile);
+  align-items: flex-end;
+  gap: .3rem;
+  padding: .4rem .5rem .3rem;
+  background: linear-gradient(to bottom, #16294a, #0a1224);
+  border-top: 2px solid var(--or);
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
@@ -434,46 +445,107 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 .carte-unite {
   flex: none;
-  width: 62px;
-  padding: .35rem .25rem .3rem;
-  background: rgba(23,41,74,.7);
-  border: 1px solid transparent;
-  border-radius: 3px;
+  width: 46px;
+  padding: 0;
+  background: none;
+  border: 0;
   display: grid;
-  gap: .2rem;
+  gap: 1px;
   justify-items: center;
 }
-.carte-unite.choisie { border-color: var(--or-vif); background: rgba(200,163,73,.2); }
-.carte-unite.rompue { opacity: .45; }
-.cu-ecu {
-  width: 22px; height: 14px;
-  border-radius: 2px;
-  border: 1px solid rgba(255,255,255,.3);
+.carte-unite.rompue { opacity: .42; }
+
+/* La vignette : portrait ovale cerclé d'or, jauge de moral à droite. */
+.cu-vignette {
+  position: relative;
+  display: block;
+  width: 40px;
+  height: 48px;
 }
-.cu-nom {
-  font-family: var(--display);
-  font-size: .5rem;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  color: var(--txt-bas);
-  line-height: 1.1;
-  text-align: center;
+.cu-portrait { display: block; width: 40px; height: 48px; }
+
+.carte-unite.choisie .cu-vignette::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border: 2px solid var(--or-vif);
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(240,213,133,.6);
 }
+
+.cu-moral {
+  position: absolute;
+  right: 1px;
+  bottom: 7px;
+  width: 4px;
+  height: 30px;
+  background: rgba(4,8,14,.75);
+  border: 1px solid rgba(200,163,73,.55);
+  border-radius: 1px;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+.cu-moral i { display: block; width: 100%; background: #6fae5c; }
+
+/* La plaque d'effectif, sous le portrait. */
 .cu-nb {
+  min-width: 30px;
+  padding: 0 .2rem;
+  background: linear-gradient(to bottom, #f6f1e2, #cfc7b2);
+  border: 1px solid var(--or);
+  border-radius: 7px;
   font-family: var(--display);
-  font-size: .72rem;
+  font-size: .62rem;
   font-weight: 700;
-  color: var(--parch);
+  color: #1b2338;
+  text-align: center;
   font-variant-numeric: tabular-nums;
 }
-.cu-moral {
-  width: 100%;
-  height: 3px;
-  background: rgba(0,0,0,.45);
+
+/* ---------- Bandeau de bataille : général, jauges, vitesses ---------- */
+
+.barre-bataille {
+  gap: .5rem;
+  background: linear-gradient(to bottom, #16294a, #0a1224);
+  border-bottom: 2px solid var(--or);
+}
+
+.general { display: flex; align-items: center; gap: .45rem; min-width: 0; flex: 1; }
+.general-ecu { width: 34px; height: 42px; flex: none; }
+.general-jauges { flex: 1; min-width: 0; display: grid; gap: 2px; }
+
+.jauge-armee {
+  display: flex;
+  height: 9px;
+  background: rgba(4,8,14,.8);
+  border: 1px solid var(--or);
   border-radius: 2px;
   overflow: hidden;
 }
-.cu-moral i { display: block; height: 100%; background: #7fb069; }
+.jauge-armee i { display: block; height: 100%; }
+.j-nous { background: linear-gradient(to bottom, #7cc063, #4c8a3c); }
+.j-eux  { background: linear-gradient(to bottom, #c9584a, #8d3128); margin-left: auto; }
+
+.general-noms {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--display);
+  font-size: .6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.general-noms span:first-child { color: #8fd07a; }
+.general-noms span:last-child { color: #e2897b; }
+
+.chrono {
+  font-family: var(--display);
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--parch);
+  font-variant-numeric: tabular-nums;
+  padding-left: .15rem;
+}
 
 /* ---------- Fenêtres ---------- */
 

@@ -33,6 +33,28 @@ Toutes les commandes sont tactiles : on touche un régiment pour le choisir, le 
 l'y envoyer, une unité ennemie pour l'attaquer. Plusieurs régiments choisis se déploient
 côte à côte sur une même ligne. On glisse pour déplacer la vue, on pince pour zoomer.
 
+## Les graphismes
+
+Tout est peint au canevas, sans une seule image importée.
+
+- **Les hommes sont des figurines**, pas des points : shako, habit à la couleur de la
+  faction, buffleterie, mousquet ; cavalier et monture ; servants et pièces d'artillerie
+  avec leurs roues à rayons. Le bloc d'un régiment est peint dans son propre canevas et
+  n'est refait que lorsque les rangs changent — sans quoi mille figurines redessinées
+  soixante fois par seconde mettraient le jeu à genoux.
+- **Le champ de bataille** a son relief (calculé en bruit fractal puis adouci), ses
+  parcelles cultivées, ses haies, son ruisseau et ses bosquets. Les salves allument des
+  lueurs de bouche sur toute la ligne de feu, et la poudre dérive au vent.
+- **La carte de campagne** est peinte de la même façon : trait de côte tiré de l'union
+  des provinces, hauts-fonds, relief ombré, forêts, fleuves. La teinte de faction est
+  une glaçure, pas un aplat — le relief reste visible dessous.
+- **Les noms de provinces** sont des plaques bordées d'or, bleues chez nous, rouges chez
+  l'adversaire, ambrées ailleurs. Elles s'effacent d'elles-mêmes quand elles se
+  recouvriraient, en servant d'abord la province ouverte et les capitales.
+- **L'interface** reprend le même vocabulaire : portrait du général dans un ovale doré,
+  jauge d'armée verte et rouge, portraits d'unité ovales avec leur plaque d'effectif,
+  minicarte encadrée où l'on peut toucher pour se déplacer.
+
 ## Jouer
 
 ```sh
@@ -56,6 +78,7 @@ jeu/index.html           le jeu
 jeu/css/jeu.css          interface, pensée pour le pouce
 jeu/js/donnees.js        factions, provinces, types d'unités
 jeu/js/util.js           maths, aléatoire reproductible, DOM, sauvegarde
+jeu/js/deco.js           ornements, plaques, figurines, bruit fractal
 jeu/js/audio.js          sons synthétisés par WebAudio (aucun fichier)
 jeu/js/carte.js          rendu de la carte de campagne
 jeu/js/bataille.js       moteur de bataille temps réel

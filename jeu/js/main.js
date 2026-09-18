@@ -359,8 +359,7 @@
 
     montrer('ecran-bataille');
     U.el('#depart').hidden = false;
-    U.el('#bat-nous-nom').textContent = D.FACTIONS[factionNous].nom;
-    U.el('#bat-eux-nom').textContent = D.FACTIONS[factionEux].nom;
+    dessinerGeneral(factionNous);
 
     if (bataille) bataille.arreter();
     bataille = JEU.Bataille.creer({
@@ -383,6 +382,20 @@
 
   var bandeauSale = false;
 
+  /* Vignette du général : la figurine de la faction dans un ovale doré. */
+  function dessinerGeneral(faction) {
+    var toile = U.el('#general-ecu');
+    var f = D.FACTIONS[faction];
+    var g = toile.getContext('2d');
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var l = 42, h = 52;
+    toile.width = l * dpr;
+    toile.height = h * dpr;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var v = JEU.Deco.portraitUnite('cav', f.couleur, f.clair, l, h);
+    g.drawImage(v, 0, 0, l, h);
+  }
+
   function bandeau() {
     if (!bataille) return;
     var zone = U.el('#bandeau-unites');
@@ -393,16 +406,23 @@
     if (zone.childElementCount !== nous.length) {
       U.vider(zone);
       nous.forEach(function (u) {
+        var f = D.FACTIONS[u.faction];
         var c = U.creer('button', 'carte-unite');
         c.dataset.id = u.id;
-        var e = U.creer('span', 'cu-ecu');
-        e.style.background = D.FACTIONS[u.faction].couleur;
-        c.appendChild(e);
-        c.appendChild(U.creer('span', 'cu-nom', D.UNITES[u.type].court));
+
+        var vignette = U.creer('span', 'cu-vignette');
+        var portrait = JEU.Deco.portraitUnite(D.UNITES[u.type].cat, f.couleur, f.clair, 40, 48);
+        portrait.className = 'cu-portrait';
+        portrait.style.width = '40px';
+        portrait.style.height = '48px';
+        vignette.appendChild(portrait);
+        var jauge = U.creer('span', 'cu-moral');
+        jauge.appendChild(U.creer('i'));
+        vignette.appendChild(jauge);
+        c.appendChild(vignette);
+
         c.appendChild(U.creer('span', 'cu-nb', ''));
-        var m = U.creer('span', 'cu-moral');
-        m.appendChild(U.creer('i'));
-        c.appendChild(m);
+        c.title = D.UNITES[u.type].nom;
         c.addEventListener('click', function () { bataille.selectionnerUne(u.id); bandeau(); });
         zone.appendChild(c);
       });
@@ -412,8 +432,17 @@
     bataille.unites.forEach(function (u) {
       if (u.camp === 'joueur') totalNous += u.hommes; else totalEux += u.hommes;
     });
-    U.el('#bat-nous').textContent = U.nb(totalNous);
-    U.el('#bat-eux').textContent = U.nb(totalEux);
+
+    /* Jauge d'armée : notre part en vert, celle d'en face en rouge. */
+    var somme = Math.max(1, totalNous + totalEux);
+    U.el('#j-nous').style.width = (totalNous / somme * 100) + '%';
+    U.el('#j-eux').style.width = (totalEux / somme * 100) + '%';
+    U.el('#bat-nous-nom').textContent = U.nb(totalNous);
+    U.el('#bat-eux-nom').textContent = U.nb(totalEux);
+
+    var t = Math.floor(bataille.temps);
+    U.el('#chrono').textContent =
+      String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0');
 
     U.els('.carte-unite', zone).forEach(function (c, i) {
       var u = nous[i];
@@ -423,9 +452,9 @@
       c.querySelector('.cu-nb').textContent = u.hommes;
       var part = Math.max(0, Math.min(1, u.moral / u.moralMax));
       var barre = c.querySelector('.cu-moral i');
-      barre.style.width = (part * 100) + '%';
+      barre.style.height = (part * 100) + '%';
       barre.style.background = u.etat === 'déroute' ? '#9c4b3f'
-        : (part > 0.55 ? '#7fb069' : (part > 0.28 ? '#d8a740' : '#c05a45'));
+        : (part > 0.55 ? '#6fae5c' : (part > 0.28 ? '#d8a740' : '#c05a45'));
     });
     bandeauSale = false;
   }
